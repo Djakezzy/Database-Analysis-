@@ -1,146 +1,291 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/djako/OneDrive - UNT System/Desktop/SQL project Linkedin files/Ex_Files_SQL_EssT/Exercise Files/WSDA_Music.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="query structure browser" current="0"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="125"/><column_width id="3" width="5253"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,7:mainInvoice"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="Album" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="84"/><column index="2" value="280"/><column index="3" value="76"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Invoice" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="93"/><column index="2" value="111"/><column index="3" value="162"/><column index="4" value="300"/><column index="5" value="167"/><column index="6" value="109"/><column index="7" value="132"/><column index="8" value="160"/><column index="9" value="66"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="WSDA  Database Analysis">/*The situation: For a long time, Adams Andrew, Manager of WSDA Music, has been unable to
-account for a discrepancy in his company’s financials.
-The furthest he has gotten in his own attempts to analyze the company data is figuring out that
-the discrepancy occurred between the years 2011 and 2012. But that’s about all that Adams
-knows for certain */
-
-/*You have been called in to do what you do best—apply your SQL skills:
-• Analyze WSDA Music’s Data to:
-− Get a list of suspects
-− Narrow your list
-− Pinpoint your prime suspect(s)
-The Management team at WSDA Music is eager to review your findings! Work through each part of
-the project below, then watch the corresponding final project movie to compare your answers. 
-*/
-
-/*FINDING THE NUMBER OF TRANSACTIONS THAT OCCURED BETWEEN 2011 AND 2012 */
-SELECT COUNT(*) AS [NUMBER OF TRANSACTIONS BETWEEN 2011 AND 2012]
-FROM Invoice
-WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
-
-/* FINDING TOTAL AMOUNT OF MONEY MADE BY WSDA MUSIC DURING THIS PERIOD */
-SELECT 
-	SUM(total) AS [TOTAL AMOUNT OF MONEY MADE BETWEEN 2011 AND 2012]
-FROM Invoice
-WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
-
-
-/*GETTING THE LIST OF CUSTOMERS WHO MADE A PURCHASE BETWEEN 2011 AND 2012 */
-SELECT
-	i.InvoiceId,
-	c.CustomerId,
-	c.FirstName || ' ' || c.LastName AS [CUSTOMER FULL NAME],
-	i.InvoiceDate
-FROM Invoice AS i INNER JOIN CUSTOMER AS c 
-ON c.CustomerId = i.CustomerId
-WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
-ORDER BY i.total DESC;
-
-
-/*LIST OF CUSTOMERS, SALES REP AND TOTAL OF TRANSACTIONS GENERATED FOR EACH CUSTOMER BETWEEN 2011 AND 2012
-*/
-SELECT
-	i.InvoiceId,
-	c.CustomerId,
-	c.FirstName || ' ' || c.LastName AS [CUSTOMER FULL NAME],
-	i.total ,
-	i.InvoiceDate AS [DATE OF PURCHASE],
-	e.FirstName || ' ' || e.LastName AS [EMPLOYEE FULL NAME]
-FROM Invoice AS i INNER JOIN CUSTOMER AS c 
-ON c.CustomerId = i.CustomerId
-INNER JOIN Employee AS e
-ON c.SupportRepId = e.EmployeeId
-WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
-ORDER BY i.total DESC;
-
-/*FIND THE AVERAGE TRANSACTION AMOUNT BETWEEN 2011 AND 2012*/
-SELECT 
-	round(avg(total),2) AS [AVG TRANSACTION AMOUNT]
-FROM
-	Invoice
-WHERE 
-	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
-
-/* FINDING THE NUMBER OF TRANSACTIONS THAT ARE ABOVE THE AVERAGE TRANSACTION AMOUNT FOR THE SAME TIME PERIOD*/
-SELECT 
-	COUNT(total) AS [Number of Transactions above average]
-FROM Invoice
-WHERE total &gt; (SELECT 
-	round(avg(total),2) AS [AVG TRANSACTION AMOUNT]
-FROM
-	Invoice
-WHERE 
-	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31')
-AND InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
-
-
-/*CALCULATING THE AVERAGE TRANSACTION FOR EACH YEAR THE WSDA HAS BEEN IN BUSINESS
-*/
-SELECT 
-	round(avg(total),2) AS [AVERAGE TOTAL OF TRANSACIONS],
-	strftime('%Y',InvoiceDate) AS [TRANSACTION YEAR]
-FROM Invoice
-GROUP BY strftime('%Y',InvoiceDate)
-ORDER BY InvoiceDate;
-
-/*FINDING EMPLOYEES WHO EXCEEDED THE AVERAGE FROM SALES THEY GENERATED BETWEEN 2011 AND 2012*/
-
-SELECT
-e.FirstName,
-e.LastName,
-sum(i.total) AS [TOTAL SALES FOR TRANSACTION AMOUNTS EXCEEDING AVERAGE]
-FROM
-	Invoice AS i INNER JOIN customer AS c
-	ON i.CustomerId = c.CustomerId
-	INNER JOIN Employee AS e
-	ON e.EmployeeId = c.SupportRepId
-WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31' 
-AND (i.total&gt;11.66)
-GROUP BY 
-e.FirstName,
-e.LastName
-ORDER BY e.LastName;
-
-/*CREATION OF A COMMISSION PAYOUT COLUMN FOR EACH EMPLOYEE */
-SELECT
-	e.FirstName AS [employee first name],
-	e.LastName AS [employee last name],
-	sum(i.total) AS [Total Sales],
-	round(sum(i.total)*.15,2) AS [COMMISION PAYOUT]
-FROM
-	Invoice AS i INNER JOIN customer AS c
-	ON i.CustomerId = c.CustomerId
-	INNER JOIN Employee AS e
-	ON e.EmployeeId = c.SupportRepId
-WHERE 
-	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
-GROUP BY 
-	e.FirstName,
-	e.LastName
-ORDER BY 
-	e.LastName;
---JANE PEACOCK MADE THE GREATEST AMOUNT OF COMMISSION
-
-/*LIST OF CUSTOMERS THAT JANE PEACOCK SUPPORTED */
-
-SELECT
-c.FirstName AS  [customer first name],
-c.LastName AS [customer last name],
-i.total AS [transaction total]
-FROM
-	Invoice AS i INNER JOIN customer AS c
-	ON i.CustomerId = c.CustomerId
-	INNER JOIN Employee AS e
-	ON e.EmployeeId = c.SupportRepId
-WHERE e.FirstName LIKE 'Jane' AND e.LastName lIKE 'Peacock'
-ORDER BY i.total DESC;
---THE CUSTOMER THAT MADE THE HIGHEST PURCHASE WAS JOHN DOEEIN 
-
-/*LOOKING AT CUSTOMER JOHN DOOEIN RECORD TO FIND ANY SUSPICIOUS ACTIVITY */
-SELECT *
-FROM Customer
-WHERE FirstName LIKE 'John' AND LastName LIKE 'Doeein';
---THERE IS NO BILLING ADDRESS INFORMATION FOR THIS Customer
-
-/*AFTER ANALYZING THE DATA AND FINDING SUSPICIOUS RECORDS FOR CUSTOMER JOHN DOEEIN
+/*The situation: For a long time, Adams Andrew, Manager of WSDA Music, has been unable to
+
+account for a discrepancy in his company’s financials.
+
+The furthest he has gotten in his own attempts to analyze the company data is figuring out that
+
+the discrepancy occurred between the years 2011 and 2012. But that’s about all that Adams
+
+knows for certain */
+
+
+
+/*You have been called in to do what you do best—apply your SQL skills:
+
+• Analyze WSDA Music’s Data to:
+
+− Get a list of suspects
+
+− Narrow your list
+
+− Pinpoint your prime suspect(s)
+
+The Management team at WSDA Music is eager to review your findings! Work through each part of
+
+the project below, then watch the corresponding final project movie to compare your answers. 
+
+*/
+
+
+
+/*FINDING THE NUMBER OF TRANSACTIONS THAT OCCURED BETWEEN 2011 AND 2012 */
+
+SELECT COUNT(*) AS [NUMBER OF TRANSACTIONS BETWEEN 2011 AND 2012]
+
+FROM Invoice
+
+WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
+
+
+
+/* FINDING TOTAL AMOUNT OF MONEY MADE BY WSDA MUSIC DURING THIS PERIOD */
+
+SELECT 
+
+	SUM(total) AS [TOTAL AMOUNT OF MONEY MADE BETWEEN 2011 AND 2012]
+
+FROM Invoice
+
+WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
+
+
+
+
+
+/*GETTING THE LIST OF CUSTOMERS WHO MADE A PURCHASE BETWEEN 2011 AND 2012 */
+
+SELECT
+
+	i.InvoiceId,
+
+	c.CustomerId,
+
+	c.FirstName || ' ' || c.LastName AS [CUSTOMER FULL NAME],
+
+	i.InvoiceDate
+
+FROM Invoice AS i INNER JOIN CUSTOMER AS c 
+
+ON c.CustomerId = i.CustomerId
+
+WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
+
+ORDER BY i.total DESC;
+
+
+
+
+
+/*LIST OF CUSTOMERS, SALES REP AND TOTAL OF TRANSACTIONS GENERATED FOR EACH CUSTOMER BETWEEN 2011 AND 2012
+
+*/
+
+SELECT
+
+	i.InvoiceId,
+
+	c.CustomerId,
+
+	c.FirstName || ' ' || c.LastName AS [CUSTOMER FULL NAME],
+
+	i.total ,
+
+	i.InvoiceDate AS [DATE OF PURCHASE],
+
+	e.FirstName || ' ' || e.LastName AS [EMPLOYEE FULL NAME]
+
+FROM Invoice AS i INNER JOIN CUSTOMER AS c 
+
+ON c.CustomerId = i.CustomerId
+
+INNER JOIN Employee AS e
+
+ON c.SupportRepId = e.EmployeeId
+
+WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
+
+ORDER BY i.total DESC;
+
+
+
+/*FIND THE AVERAGE TRANSACTION AMOUNT BETWEEN 2011 AND 2012*/
+
+SELECT 
+
+	round(avg(total),2) AS [AVG TRANSACTION AMOUNT]
+
+FROM
+
+	Invoice
+
+WHERE 
+
+	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
+
+
+
+/* FINDING THE NUMBER OF TRANSACTIONS THAT ARE ABOVE THE AVERAGE TRANSACTION AMOUNT FOR THE SAME TIME PERIOD*/
+
+SELECT 
+
+	COUNT(total) AS [Number of Transactions above average]
+
+FROM Invoice
+
+WHERE total &gt; (SELECT 
+
+	round(avg(total),2) AS [AVG TRANSACTION AMOUNT]
+
+FROM
+
+	Invoice
+
+WHERE 
+
+	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31')
+
+AND InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31';
+
+
+
+
+
+/*CALCULATING THE AVERAGE TRANSACTION FOR EACH YEAR THE WSDA HAS BEEN IN BUSINESS
+
+*/
+
+SELECT 
+
+	round(avg(total),2) AS [AVERAGE TOTAL OF TRANSACIONS],
+
+	strftime('%Y',InvoiceDate) AS [TRANSACTION YEAR]
+
+FROM Invoice
+
+GROUP BY strftime('%Y',InvoiceDate)
+
+ORDER BY InvoiceDate;
+
+
+
+/*FINDING EMPLOYEES WHO EXCEEDED THE AVERAGE FROM SALES THEY GENERATED BETWEEN 2011 AND 2012*/
+
+
+
+SELECT
+
+e.FirstName,
+
+e.LastName,
+
+sum(i.total) AS [TOTAL SALES FOR TRANSACTION AMOUNTS EXCEEDING AVERAGE]
+
+FROM
+
+	Invoice AS i INNER JOIN customer AS c
+
+	ON i.CustomerId = c.CustomerId
+
+	INNER JOIN Employee AS e
+
+	ON e.EmployeeId = c.SupportRepId
+
+WHERE InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31' 
+
+AND (i.total&gt;11.66)
+
+GROUP BY 
+
+e.FirstName,
+
+e.LastName
+
+ORDER BY e.LastName;
+
+
+
+/*CREATION OF A COMMISSION PAYOUT COLUMN FOR EACH EMPLOYEE */
+
+SELECT
+
+	e.FirstName AS [employee first name],
+
+	e.LastName AS [employee last name],
+
+	sum(i.total) AS [Total Sales],
+
+	round(sum(i.total)*.15,2) AS [COMMISION PAYOUT]
+
+FROM
+
+	Invoice AS i INNER JOIN customer AS c
+
+	ON i.CustomerId = c.CustomerId
+
+	INNER JOIN Employee AS e
+
+	ON e.EmployeeId = c.SupportRepId
+
+WHERE 
+
+	InvoiceDate BETWEEN '2011-01-01' AND '2012-12-31'
+
+GROUP BY 
+
+	e.FirstName,
+
+	e.LastName
+
+ORDER BY 
+
+	e.LastName;
+
+--JANE PEACOCK MADE THE GREATEST AMOUNT OF COMMISSION
+
+
+
+/*LIST OF CUSTOMERS THAT JANE PEACOCK SUPPORTED */
+
+
+
+SELECT
+
+c.FirstName AS  [customer first name],
+
+c.LastName AS [customer last name],
+
+i.total AS [transaction total]
+
+FROM
+
+	Invoice AS i INNER JOIN customer AS c
+
+	ON i.CustomerId = c.CustomerId
+
+	INNER JOIN Employee AS e
+
+	ON e.EmployeeId = c.SupportRepId
+
+WHERE e.FirstName LIKE 'Jane' AND e.LastName lIKE 'Peacock'
+
+ORDER BY i.total DESC;
+
+--THE CUSTOMER THAT MADE THE HIGHEST PURCHASE WAS JOHN DOEEIN 
+
+
+
+/*LOOKING AT CUSTOMER JOHN DOOEIN RECORD TO FIND ANY SUSPICIOUS ACTIVITY */
+
+SELECT *
+
+FROM Customer
+
+WHERE FirstName LIKE 'John' AND LastName LIKE 'Doeein';
+
+--THERE IS NO BILLING ADDRESS INFORMATION FOR THIS Customer
+
+
+
+/*AFTER ANALYZING THE DATA AND FINDING SUSPICIOUS RECORDS FOR CUSTOMER JOHN DOEEIN
+
 OUR PRIMARY PERSON OF INTEREST WOULD BE EMPLOYEE JANE PEACOCK WHO WAS THE SUPPORT REPRESENTATIVE FOR THIS CUSTOMER */</sql><current_tab id="0"/></tab_sql></sqlb_project>
